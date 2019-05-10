@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 """
+Taken from summer school edu
+
 function for zeropadding of input spectrum at center for oversampling of dataset in time domain
 
 INPUT: Spectrum (created by, e.g. numpy.fft.fft2(.)) and oversampling factor, e.g., 8
