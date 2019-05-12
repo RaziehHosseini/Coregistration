@@ -90,7 +90,7 @@ def display(mstr_amp, slv_amp):
     
     ### Slave
     fig = plt.figure('slave')
-    ax = fig.add_subplot(111)
+    ax = fig.add_subplot(112)
     cax = ax.imshow(slv_amp, interpolation='nearest', cmap=cm.gray)
     ax.set_xlabel('Range')
     ax.set_ylabel('Azimuth')
@@ -120,9 +120,21 @@ if __name__=='__main__':
     my_img_master = io.imread('./noiseless_data/master.tiff')
     my_img_slave = io.imread('./noiseless_data/slave.tiff')
     
-    # Implement harris corner detector
-    point_detectors.harris_skimage(my_img_master)
-    point_detectors.harris_skimage(my_img_slave)
+#   # Implement harris corner detector
+#   point_detectors.harris_skimage(my_img_master)
+#   point_detectors.harris_skimage(my_img_slave)
+    
+    
+#    # Implement foerstner detector
+#    point_detectors.foerstner_skimage(my_img_master)
+#    point_detectors.foerstner_skimage(my_img_slave)  
+
+#   # Implement fast corner detector
+#   point_detectors.fast_skimage(my_img_master)
+#   point_detectors.fast_skimage(my_img_slave)  
+	
+    # Harris tiled
+    point_detectors.tiled_point_detection(my_img_master, 6, method = "shi_tomasi_skimage")
 
     
     
