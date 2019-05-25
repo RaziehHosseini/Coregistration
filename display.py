@@ -45,7 +45,7 @@ def display(mstr_amp, slv_amp):
     plt.axis('tight')
     plt.show()
 
-
+# following function is taken from Image Analysis I
 def imshow3D(*I):
     """Shows the array representation of one or more images in a jupyter notebook.
 

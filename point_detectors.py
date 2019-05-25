@@ -12,6 +12,7 @@ from skimage import data
 from skimage import feature as sf
 from skimage.draw import ellipse
 import sys
+import match_points
 
 sys.path.append('../imgs')
 
@@ -20,7 +21,7 @@ sys.path.append('../imgs')
 def draw_points(img, p, sp=None): # p:detected points sp:detected points (sub-pixels)
     
     fig, ax = plt.subplots()
-    ax.set(title=p.tostring)                                                   # TODO (plot results with title and all in one figure)
+    #ax.set(title=p.tostring)                                                   # TODO (plot results with title and all in one figure)
     ax.imshow(img, interpolation='nearest', cmap=plt.cm.gray)
     ax.plot(p[:, 1], p[:, 0], '.r', markersize=2)
     #ax.plot(sp[:, 1], sp[:, 0], '.b', markersize=5)
@@ -41,6 +42,7 @@ def harris_skimage(image, **kwargs):
     cornerness_matrix = sf.corner_peaks(sf.corner_harris(image), min_distance=1) # larger distance -> fewer points
     coords_subpix = sf.corner_subpix(image, cornerness_matrix, window_size=13) # sub pixel accuracy
     draw_points(image, cornerness_matrix, coords_subpix)
+    print("detected points: ",cornerness_matrix.size)
     return cornerness_matrix, coords_subpix
 
 def shi_tomasi_skimage(image, **kwargs):
@@ -48,13 +50,14 @@ def shi_tomasi_skimage(image, **kwargs):
     cornerness_matrix = sf.corner_peaks(sf.corner_shi_tomasi(image), min_distance=1)
     coords_subpix = sf.corner_subpix(image, cornerness_matrix, window_size = 13)
     draw_points(image, cornerness_matrix, coords_subpix)
+    print("detected points: ",cornerness_matrix.size)
     return cornerness_matrix, coords_subpix
         
-def kitchen_rosenfeld_skimage(image, threshold_abs):
+def kitchen_rosenfeld_skimage(image, threshold_abs_kr, **kwargs):
     coords_subpix = np.zeros_like(image)
     cornerness_matrix = sf.corner_peaks(sf.corner_kitchen_rosenfeld(image,mode= 'constant'), 
                                         min_distance=1,
-                                        threshold_abs=threshold_abs,
+                                        threshold_abs=threshold_abs_kr,
                                         threshold_rel=0.3)
     #coords_subpix = sf.corner_subpix(image, cornerness_matrix, window_size = 13)
     print("detected points: ",cornerness_matrix.size)
@@ -63,19 +66,20 @@ def kitchen_rosenfeld_skimage(image, threshold_abs):
 
 def fast_skimage(image, **kwargs):
     coords_subpix = np.zeros_like(image)
-    cornerness_matrix = sf.corner_peaks(sf.corner_fast(image, 16), min_distance=1)
+    cornerness_matrix = sf.corner_peaks(sf.corner_fast(image, 16, 0.8), min_distance=1)
     coords_subpix = sf.corner_subpix(image, cornerness_matrix, window_size=13)
     draw_points(image, cornerness_matrix)
     return cornerness_matrix, coords_subpix
 
 def foerstner_skimage(image,**kwargs):
     w, q = sf.corner_foerstner(image)
-    q_min = 0.5
-    w_min = 0.3
+    q_min = 0.9
+    w_min = 0.1
     foerstner = (q > q_min) * (w > w_min) * w
     cornerness_matrix = sf.corner_peaks(foerstner, min_distance=1)
     coords_subpix = sf.corner_subpix(image, cornerness_matrix, window_size=13)
     draw_points(image, cornerness_matrix)
+    print("detected points: ",cornerness_matrix.size)
     return cornerness_matrix, coords_subpix
     
 dict_func = {"harris_skimage":harris_skimage, 
@@ -90,24 +94,33 @@ def tiled_point_detection(image, partition = 2, method = "harris_skimage"):
     h, w = np.shape(image)
     part_half = partition/2 # to check scale of w w.r.t. h
     detector_method = dict_func.get(method)
-    kwargs = {"threshold_abs": np.min(image)}
-    total_cornerness = np.zeros_like(image)                                   # TODO (save points to be shown on whole img)
+    kwargs = {"threshold_abs_kr": np.min(image)}
+    total_cornerness = np.zeros_like(image)   
+    if part_half*h < w:                                                        # TODO (save points to be shown on whole img)
         img_partitioned = partition_img(w,h, image, partition)
         for i in range(img_partitioned.shape[2]):
-            detector_method(img_partitioned[:,:,i], **kwargs)
+            cornerness_matrix, coords_subpix = detector_method(img_partitioned[:,:,i], **kwargs)
             
     elif part_half*w < h:
-        img_partitioned = partition(h, w, image)
+        img_partitioned = partition_img(h, w, image, partition)
         for i in range(img_partitioned.shape[2]):
-            detector_method(img_partitioned[:,:,i], **kwargs)
+            cornerness_matrix, coords_subpix = detector_method(img_partitioned[:,:,i], **kwargs)
     else:
         # partition along both w and h                                        # TODO (Partition along both h and w)
         print("end")
-        
+    
+    return cornerness_matrix, coords_subpix
+
+    
+    
 #if __name__== '__main__':
-#    kitchen_rosenfeld_skimage(my_img_master)
-#    tiled_point_detection(my_img_master, partition=2, method = "foerstner_skimage")
-        
+##    kitchen_rosenfeld_skimage(my_img_master, np.my_img_master)
+##    
+##    master_points = fast_skimage(my_img_master)
+##    slave_points = fast_skimage(my_img_slave)
+##    matcher = match_points.matcher(my_img_master, my_img_slave, master_points, slave_points)
+#    cornerness_matrix_ma, coords_subpix_ma = tiled_point_detection(my_img_master, partition=2, method = "foerstner_skimage")
+#    cornerness_matrix_sl, coords_subpix_sl = tiled_point_detection(my_img_slave, partition=2, method = "foerstner_skimage")    
                                                                                # Other TODOs: 
                                                                                #             1)get result for matching (flow vectors)
                                                                                #             2) gettting histogram of tile vs num of points
